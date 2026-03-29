@@ -65,11 +65,15 @@ if ee_initialized:
             # Inisialisasi Peta (Default Jakarta Bay)
            m = geemap.Map(center=[-6.12, 106.83], zoom=10, add_google_map=False)
             
-            # Tambahkan peta dasar
-            if basemap == "Satellite": m.add_basemap('SATELLITE')
-            elif basemap == "Roadmap": m.add_basemap('ROADMAP')
-            elif basemap == "Terrain": m.add_basemap('TERRAIN')
-            else: m.add_basemap('HYBRID')
+            # Tambahkan peta dasar (Pastikan sejajar dengan inisialisasi m)
+            if basemap == "Satellite":
+                m.add_basemap('SATELLITE')
+            elif basemap == "Roadmap":
+                m.add_basemap('ROADMAP')
+            elif basemap == "Terrain":
+                m.add_basemap('TERRAIN')
+            else:
+                m.add_basemap('HYBRID')
             
             # --- LOGIKA DATA ---
             if data_type == "Marine Debris (Sentinel-2)":

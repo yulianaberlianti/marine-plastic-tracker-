@@ -1,7 +1,7 @@
 # SKRIP UTAMA (Web Streamlit)
 import streamlit as st
 import ee
-import geemap.foliumap as geemap
+import geemap
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(layout="wide", page_title="Marine Plastic Tracker")

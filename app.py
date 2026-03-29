@@ -1,7 +1,8 @@
 # SKRIP UTAMA (Web Streamlit)
 import streamlit as st
 import ee
-import geemap
+import geemap.foliumap as geemap
+import json
 import traceback
 
 # 1. Konfigurasi Halaman Web
@@ -10,152 +11,121 @@ st.set_page_config(
     page_title="Marine Plastic Tracker"
 )
 
-# 2. Header Aplikasi
-st.title("🌊 Marine Plastic Tracker")
-st.markdown("---")
-
-# 3. Fungsi untuk autentikasi Earth Engine
+# 2. Fungsi untuk autentikasi Earth Engine (PENTING UNTUK DEPLOY)
 @st.cache_resource
 def initialize_ee():
-    """Inisialisasi Google Earth Engine"""
+    """Inisialisasi Google Earth Engine menggunakan Secrets"""
     try:
-        # Coba autentikasi dengan service account atau anonymous
-        ee.Initialize()
-        return True
-    except Exception as e:
-        try:
-            # Alternatif untuk development
-            ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
+        # Cek apakah kunci ada di Secrets
+        if 'GCP_SERVICE_ACCOUNT_KEY' in st.secrets:
+            secret_input = st.secrets['GCP_SERVICE_ACCOUNT_KEY']
+            info = json.loads(secret_input)
+            credentials = ee.ServiceAccountCredentials(info['client_email'], key_data=info['private_key'])
+            ee.Initialize(credentials)
             return True
-        except:
-            st.error(f"Error initializing Earth Engine: {str(e)}")
-            st.info("Pastikan Anda sudah login ke Google Earth Engine")
-            return False
+        else:
+            # Fallback untuk lokal (jika sudah login di laptop)
+            ee.Initialize()
+            return True
+    except Exception as e:
+        st.error(f"Error initializing Earth Engine: {str(e)}")
+        return False
 
-# 4. Inisialisasi Earth Engine
+# 3. Jalankan Inisialisasi
 ee_initialized = initialize_ee()
+
+# 4. Header Aplikasi
+st.title("🌊 Marine Plastic Tracker")
+st.markdown("---")
 
 if ee_initialized:
     # 5. Sidebar untuk kontrol
     with st.sidebar:
         st.header("⚙️ Kontrol")
         
-        # Pilihan peta dasar
         basemap = st.selectbox(
             "Pilih Peta Dasar",
             ["Satellite", "Roadmap", "Terrain", "Hybrid"]
         )
         
-        # Pilihan jenis data
         data_type = st.selectbox(
             "Pilih Jenis Data",
-            ["Marine Debris", "Sea Surface Temperature", "Chlorophyll"]
+            ["Marine Debris (Sentinel-2)", "Sea Surface Temperature", "Chlorophyll"]
         )
         
-        # Tombol refresh
         if st.button("🔄 Refresh Peta"):
             st.rerun()
     
-    # 6. Layout utama dengan dua kolom
-    col1, col2 = st.columns([2, 1])
+    # 6. Layout utama
+    col1, col2 = st.columns([3, 1])
     
     with col1:
-        st.subheader("🗺️ Peta Deteksi Sampah Plastik")
+        st.subheader(f"🗺️ Peta: {data_type}")
         
-        # Buat peta interaktif
         try:
-            m = geemap.Map(center=[0, 150], zoom=3)
+            # Inisialisasi Peta (Default Jakarta Bay)
+            m = geemap.Map(center=[-6.12, 106.83], zoom=10)
             
-            # Tambahkan peta dasar berdasarkan pilihan
-            if basemap == "Satellite":
-                m.add_basemap('SATELLITE')
-            elif basemap == "Roadmap":
-                m.add_basemap('ROADMAP')
-            elif basemap == "Terrain":
-                m.add_basemap('TERRAIN')
-            else:
-                m.add_basemap('HYBRID')
+            # Tambahkan peta dasar
+            if basemap == "Satellite": m.add_basemap('SATELLITE')
+            elif basemap == "Roadmap": m.add_basemap('ROADMAP')
+            elif basemap == "Terrain": m.add_basemap('TERRAIN')
+            else: m.add_basemap('HYBRID')
             
-            # Contoh: Tambahkan data sampah laut (gunakan dataset yang sesuai)
-            if data_type == "Marine Debris":
-                st.info("Menampilkan data marine debris...")
-                # Contoh dataset: Tambahkan kode untuk data marine debris
-                # Anda bisa menambahkan layer dari Earth Engine di sini
+            # --- LOGIKA DATA ---
+            if data_type == "Marine Debris (Sentinel-2)":
+                # Menggunakan Floating Debris Index (FDI) Sederhana
+                s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
+                    .filterDate('2024-01-01', '2024-12-31') \
+                    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 10)) \
+                    .median()
                 
+                # Rumus FDI: NIR - (RE2 + (NIR - RE2) * 0.5)
+                fdi = s2.expression('B8 - (B6 + (B8 - B6) * 0.5)', {
+                    'B8': s2.select('B8'),
+                    'B6': s2.select('B6')
+                }).rename('FDI')
+                
+                m.add_layer(s2, {'bands': ['B4', 'B3', 'B2'], 'max': 3000}, 'Citra Asli')
+                m.add_layer(fdi, {'min': 0, 'max': 1000, 'palette': ['white', 'orange', 'red']}, 'Potensi Sampah (FDI)')
+
             elif data_type == "Sea Surface Temperature":
-                st.info("Menampilkan data suhu permukaan laut...")
-                # Dataset contoh: NASA/USGS Landsat
-                try:
-                    # Dataset suhu permukaan laut
-                    sst = ee.ImageCollection('NASA/OCEANDATA/MODIS-Aqua/L3SMI') \
-                        .filterDate('2024-01-01', '2024-12-31') \
-                        .select('sst') \
-                        .mean()
-                    
-                    vis_params = {
-                        'min': 0,
-                        'max': 30,
-                        'palette': ['blue', 'cyan', 'green', 'yellow', 'red']
-                    }
-                    m.add_layer(sst, vis_params, 'Sea Surface Temperature')
-                except Exception as e:
-                    st.warning(f"Tidak dapat memuat data SST: {str(e)}")
+                sst = ee.ImageCollection('NASA/OCEANDATA/MODIS-Aqua/L3SMI') \
+                    .filterDate('2024-01-01', '2024-12-31') \
+                    .select('sst').mean()
+                m.add_layer(sst, {'min': 15, 'max': 35, 'palette': ['blue', 'cyan', 'yellow', 'red']}, 'SST')
             
             elif data_type == "Chlorophyll":
-                st.info("Menampilkan data klorofil...")
-                try:
-                    # Dataset klorofil
-                    chl = ee.ImageCollection('NASA/OCEANDATA/MODIS-Aqua/L3SMI') \
-                        .filterDate('2024-01-01', '2024-12-31') \
-                        .select('chlor_a') \
-                        .mean()
-                    
-                    vis_params = {
-                        'min': 0,
-                        'max': 50,
-                        'palette': ['purple', 'blue', 'green', 'yellow']
-                    }
-                    m.add_layer(chl, vis_params, 'Chlorophyll Concentration')
-                except Exception as e:
-                    st.warning(f"Tidak dapat memuat data klorofil: {str(e)}")
-            
+                chl = ee.ImageCollection('NASA/OCEANDATA/MODIS-Aqua/L3SMI') \
+                    .filterDate('2024-01-01', '2024-12-31') \
+                    .select('chlor_a').mean()
+                m.add_layer(chl, {'min': 0, 'max': 30, 'palette': ['purple', 'blue', 'green', 'yellow']}, 'Chlorophyll')
+
             # Tampilkan peta
             m.to_streamlit(height=600)
             
         except Exception as e:
             st.error(f"Error creating map: {str(e)}")
-            st.code(traceback.format_exc())
-    
+
     with col2:
         st.subheader("📊 Informasi")
-        
-        # Informasi lokasi
         st.info("""
         **Tentang Aplikasi:**
-        Aplikasi ini memonitor sampah plastik di laut menggunakan data satelit.
+        Aplikasi ini memonitor kondisi laut menggunakan data satelit Google Earth Engine.
         
-        **Data yang Ditampilkan:**
-        - Marine debris distribution
-        - Sea surface temperature
-        - Chlorophyll concentration
+        **Indikator:**
+        - **FDI (Floating Debris Index):** Mendeteksi benda mengapung (termasuk plastik) di permukaan air.
+        - **SST:** Suhu permukaan laut.
+        - **Chlorophyll:** Konsentrasi klorofil (kesehatan ekosistem).
         """)
         
-        # Statistik sederhana
-        st.metric("Status", "Active" if ee_initialized else "Error")
-        st.metric("Data Source", "Google Earth Engine")
-        
-        # Catatan
-        st.warning("""
-        **Catatan:**
-        - Data ditampilkan berdasarkan koleksi dataset dari Earth Engine
-        - Beberapa dataset mungkin memerlukan autentikasi tambahan
-        """)
+        st.metric("Status GEE", "Active")
+        st.metric("Satelit Utama", "Sentinel-2 / MODIS")
+
 else:
-    # 7. Tampilkan pesan error jika Earth Engine tidak bisa diinisialisasi
     st.error("❌ Google Earth Engine tidak dapat diinisialisasi")
     st.markdown("""
     ### Cara Memperbaiki:
-    
-    1. **Login ke Google Earth Engine**:
-       ```bash
-       earthengine authenticate
+    1. Pastikan isi **Secrets** di Streamlit Cloud sudah benar (format JSON).
+    2. Pastikan akun email Service Account sudah diberi izin (*role*) **Earth Engine Resource Viewer** di Google Cloud Console.
+    """)

@@ -48,3 +48,14 @@ m.addLayer(fdi_result, {'min': 0, 'max': 1000, 'palette': ['white', 'red']}, 'Po
 m.to_streamlit(height=600)
 
 st.info("💡 Warna merah pada peta menunjukkan area dengan reflektansi tinggi yang berpotensi sebagai sampah plastik mengapung.")
+
+# 2. Inisialisasi Earth Engine menggunakan Secrets
+import json
+
+if 'GCP_SERVICE_ACCOUNT_KEY' in st.secrets:
+    # Mengambil string JSON dari Secrets dan mengubahnya kembali jadi dictionary
+    info = json.loads(st.secrets['GCP_SERVICE_ACCOUNT_KEY'])
+    credentials = ee.ServiceAccountCredentials(info['client_email'], key_data=info['private_key'])
+    ee.Initialize(credentials)
+else:
+    st.error("Kunci akses (Secrets) tidak ditemukan!")

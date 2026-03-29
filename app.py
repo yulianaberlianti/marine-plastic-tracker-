@@ -65,7 +65,14 @@ if ee_initialized:
             # Inisialisasi Peta (Default Jakarta Bay)
            m = geemap.Map(center=[-6.12, 106.83], zoom=10, add_google_map=False)
             
-            # Tambahkan peta dasar (Pastikan sejajar dengan inisialisasi m)
+            with col1:
+        st.subheader(f"🗺️ Peta: {data_type}")
+        
+        try:
+            # Pastikan m = geemap sejajar di bawah try:
+            m = geemap.Map(center=[-6.12, 106.83], zoom=10)
+            
+            # Gunakan 12 spasi (atau 3x tab) di depan 'if' agar lurus dengan 'm'
             if basemap == "Satellite":
                 m.add_basemap('SATELLITE')
             elif basemap == "Roadmap":
@@ -74,6 +81,20 @@ if ee_initialized:
                 m.add_basemap('TERRAIN')
             else:
                 m.add_basemap('HYBRID')
+            
+            # Logika Data (Pastikan sejajar juga)
+            if data_type == "Marine Debris (Sentinel-2)":
+                s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
+                    .filterDate('2024-01-01', '2024-12-31') \
+                    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 10)) \
+                    .median()
+                m.add_layer(s2, {'bands': ['B4', 'B3', 'B2'], 'max': 3000}, 'Citra Asli')
+            
+            # Tampilkan peta
+            m.to_streamlit(height=600)
+            
+        except Exception as e:
+            st.error(f"Error creating map: {str(e)}")
             
             # --- LOGIKA DATA ---
             if data_type == "Marine Debris (Sentinel-2)":

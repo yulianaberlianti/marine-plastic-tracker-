@@ -1,5 +1,5 @@
 # Daftar library
 streamlit
 earthengine-api
-geemap
-folium
+geemap==0.32.1
+pycrs

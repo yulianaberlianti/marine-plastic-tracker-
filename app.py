@@ -1,9 +1,8 @@
 # SKRIP UTAMA (Web Streamlit)
 import streamlit as st
 import ee
-import geemap
+import geemap 
 import json
-import traceback
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(
@@ -64,7 +63,7 @@ if ee_initialized:
         
         try:
             # Inisialisasi Peta (Default Jakarta Bay)
-            m = geemap.Map(center=[-6.12, 106.83], zoom=10)
+           m = geemap.Map(center=[-6.12, 106.83], zoom=10, add_google_map=False)
             
             # Tambahkan peta dasar
             if basemap == "Satellite": m.add_basemap('SATELLITE')

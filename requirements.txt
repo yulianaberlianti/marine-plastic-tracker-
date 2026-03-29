@@ -1,3 +1,5 @@
 earthengine-api==0.1.390
 folium==0.17.0
 streamlit-folium==0.22.0
+plotly==5.22.0
+pandas==2.2.2

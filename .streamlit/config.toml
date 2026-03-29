@@ -1,1 +1,7 @@
+## 3. File `packages.txt` (untuk deployment di Streamlit Cloud)
 
+Buat file `packages.txt` di root project:
+
+```txt
+libgl1-mesa-glx
+libglib2.0-0

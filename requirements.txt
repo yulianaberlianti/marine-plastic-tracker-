@@ -1,4 +1,3 @@
-streamlit
-earthengine-api
-geemap
-setuptools
+earthengine-api==0.1.390
+folium==0.17.0
+streamlit-folium==0.22.0

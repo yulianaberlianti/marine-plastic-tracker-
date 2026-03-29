@@ -62,25 +62,26 @@ if ee_initialized:
         st.subheader(f"🗺️ Peta: {data_type}")
         
         try:
-            # Inisialisasi Peta (Default Jakarta Bay)
-           m = geemap.Map(center=[-6.12, 106.83], zoom=10, add_google_map=False)
-            
-            with col1:
+if ee_initialized:
+    # 5. Sidebar untuk kontrol (1x Tab dari kiri)
+    with st.sidebar:
+        st.header("⚙️ Kontrol")
+        basemap = st.selectbox("Pilih Peta Dasar", ["Satellite", "Roadmap", "Terrain", "Hybrid"])
+        data_type = st.selectbox("Pilih Jenis Data", ["Marine Debris", "SST", "Chlorophyll"])
+
+    # 6. Layout utama (1x Tab dari kiri)
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
         st.subheader(f"🗺️ Peta: {data_type}")
-        
         try:
-            # Pastikan m = geemap sejajar di bawah try:
             m = geemap.Map(center=[-6.12, 106.83], zoom=10)
-            
-            # Gunakan 12 spasi (atau 3x tab) di depan 'if' agar lurus dengan 'm'
             if basemap == "Satellite":
                 m.add_basemap('SATELLITE')
-            elif basemap == "Roadmap":
-                m.add_basemap('ROADMAP')
-            elif basemap == "Terrain":
-                m.add_basemap('TERRAIN')
-            else:
-                m.add_basemap('HYBRID')
+            # ... tambahkan elif lainnya dengan lurus ...
+            m.to_streamlit(height=600)
+        except Exception as e:
+            st.error(f"Error: {e}")
             
             # Logika Data (Pastikan sejajar juga)
             if data_type == "Marine Debris (Sentinel-2)":

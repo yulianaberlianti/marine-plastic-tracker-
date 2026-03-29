@@ -1,7 +1,23 @@
 # SKRIP UTAMA (Web Streamlit)
 import streamlit as st
 import ee
-import geemap
+import geemap.foliumap as geemap # Pakai foliumap khusus untuk web
+import json
+
+# Inisialisasi GEE
+if 'GCP_SERVICE_ACCOUNT_KEY' in st.secrets:
+    try:
+        # Load kunci dari Secrets
+        info = json.loads(st.secrets['GCP_SERVICE_ACCOUNT_KEY'])
+        credentials = ee.ServiceAccountCredentials(info['client_email'], key_data=info['private_key'])
+        
+        # Inisialisasi hanya jika belum ada
+        if not ee.data._credentials:
+            ee.Initialize(credentials)
+    except Exception as e:
+        st.error(f"Gagal Inisialisasi: {e}")
+else:
+    st.error("Kunci Secrets tidak ditemukan!")
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(layout="wide", page_title="Marine Plastic Tracker")
@@ -49,13 +65,3 @@ m.to_streamlit(height=600)
 
 st.info("💡 Warna merah pada peta menunjukkan area dengan reflektansi tinggi yang berpotensi sebagai sampah plastik mengapung.")
 
-# 2. Inisialisasi Earth Engine menggunakan Secrets
-import json
-
-if 'GCP_SERVICE_ACCOUNT_KEY' in st.secrets:
-    # Mengambil string JSON dari Secrets dan mengubahnya kembali jadi dictionary
-    info = json.loads(st.secrets['GCP_SERVICE_ACCOUNT_KEY'])
-    credentials = ee.ServiceAccountCredentials(info['client_email'], key_data=info['private_key'])
-    ee.Initialize(credentials)
-else:
-    st.error("Kunci akses (Secrets) tidak ditemukan!")

@@ -1,6 +1,5 @@
-streamlit==1.31.1
+streamlit
 earthengine-api
-geemap==0.29.6
-python-box==6.1.0
+geemap==0.32.1
 setuptools
 pycrs

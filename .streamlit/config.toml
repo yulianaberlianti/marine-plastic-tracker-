@@ -1,7 +1,9 @@
-## 3. File `packages.txt` (untuk deployment di Streamlit Cloud)
+[server]
+maxUploadSize = 10
 
-Buat file `packages.txt` di root project:
-
-```txt
-libgl1-mesa-glx
-libglib2.0-0
+[theme]
+primaryColor = "#1f77b4"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
